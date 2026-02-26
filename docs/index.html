@@ -544,32 +544,6 @@
       sequence: { actorMargin: 60 },
     });
 
-    // ── Custom marked renderer ──
-    const renderer = {
-      // Render mermaid blocks as divs; add data-lang to all pre tags
-      code({ text, lang }) {
-        if (lang === 'mermaid') {
-          return `<div class="mermaid">${text}</div>`;
-        }
-        const escaped = text
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
-        const langAttr = lang ? ` data-lang="${lang}"` : '';
-        const cls = lang ? ` class="language-${lang}"` : '';
-        return `<pre${langAttr}><code${cls}>${escaped}</code></pre>`;
-      },
-      // Strip the H1 (already in hero)
-      heading({ text, depth }) {
-        if (depth === 1) return '';
-        const id = text.toLowerCase().replace(/[^\w]+/g, '-');
-        return `<h${depth} id="${id}">${text}</h${depth}>`;
-      },
-      // Strip the tags / about-the-author footer sections
-    };
-
-    marked.use({ renderer });
-
     // ── Fetch & render ──
     fetch('article.md')
       .then(r => {
@@ -577,17 +551,30 @@
         return r.text();
       })
       .then(async md => {
-        // Strip the Tags line and About the Author block at the end (already in HTML)
+        // Strip H1 title (shown in hero), Tags line, and About the Author block
         md = md
+          .replace(/^#\s+.+$/m, '')
           .replace(/^\*\*Tags\*\*:.*$/m, '')
           .replace(/### About the Author[\s\S]*$/, '');
 
         const article = document.getElementById('article');
+
+        // Render markdown with default marked settings
         article.innerHTML = marked.parse(md);
 
-        // Syntax highlight all code blocks
-        article.querySelectorAll('pre code').forEach(block => {
-          hljs.highlightElement(block);
+        // Post-process: convert <pre><code class="language-mermaid"> to .mermaid divs
+        article.querySelectorAll('code.language-mermaid').forEach(el => {
+          const div = document.createElement('div');
+          div.className = 'mermaid';
+          div.textContent = el.textContent;
+          el.closest('pre').replaceWith(div);
+        });
+
+        // Add data-lang badge to code blocks and syntax highlight them
+        article.querySelectorAll('pre code[class]').forEach(el => {
+          const lang = (el.className.match(/language-(\w+)/) || [])[1];
+          if (lang) el.closest('pre').setAttribute('data-lang', lang);
+          hljs.highlightElement(el);
         });
 
         // Render mermaid diagrams
