@@ -26,6 +26,10 @@ env/
 htmlcov/
 .tox/
 
+# Docs (local only)
+docs/
+MEDIUM_ARTICLE.md
+
 # IDEs
 .vscode/
 .idea/
