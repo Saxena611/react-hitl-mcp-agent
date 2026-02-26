@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Four Patterns That Separate Real AI Agents from Fancy Chatbots</title>
+  <meta name="description" content="A practical guide to ReAct + Human-in-the-Loop + MCP: building AI agents that reason, pause, and act responsibly." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- highlight.js – GitHub Dark theme -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+
+  <!-- marked.js -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+
+  <!-- mermaid.js -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #fafaf9;
+      --surface: #ffffff;
+      --text: #1a1a1a;
+      --text-secondary: #6b6b6b;
+      --text-light: #999;
+      --accent: #1a8917;
+      --accent-hover: #156912;
+      --border: #e8e8e8;
+      --code-bg: #1e1e2e;
+      --inline-code-bg: #f0f0f0;
+      --inline-code-text: #c7254e;
+      --blockquote-border: #1a8917;
+      --blockquote-bg: #f6fbf6;
+      --tag-bg: #f2f2f2;
+      --shadow: 0 2px 8px rgba(0,0,0,0.06);
+      --max-width: 740px;
+      --font-body: 'Lora', Georgia, serif;
+      --font-ui: 'Inter', -apple-system, sans-serif;
+      --font-code: 'Fira Code', 'Courier New', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.8;
+      font-size: 18px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Reading progress ── */
+    #progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 3px;
+      width: 0%;
+      background: var(--accent);
+      z-index: 1000;
+      transition: width 0.1s linear;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky;
+      top: 0;
+      background: rgba(250,250,249,0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-brand {
+      font-family: var(--font-ui);
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text);
+      text-decoration: none;
+      letter-spacing: -0.3px;
+    }
+    .nav-links {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    .nav-links a {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .btn-repo {
+      background: var(--text);
+      color: #fff !important;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px !important;
+      font-weight: 600 !important;
+    }
+    .btn-repo:hover { background: #333; }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, #0f1117 0%, #1a1f35 50%, #0d1b0f 100%);
+      padding: 80px 24px 72px;
+      text-align: center;
+    }
+    .hero-tag {
+      display: inline-block;
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #7dd87d;
+      border: 1px solid #3d6b3d;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-family: var(--font-ui);
+      font-size: clamp(26px, 5vw, 42px);
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.2;
+      letter-spacing: -0.5px;
+      max-width: 760px;
+      margin: 0 auto 20px;
+    }
+    .hero-subtitle {
+      font-family: var(--font-body);
+      font-size: 18px;
+      font-style: italic;
+      color: #adb5bd;
+      max-width: 560px;
+      margin: 0 auto 36px;
+      line-height: 1.6;
+    }
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .hero-meta span {
+      font-family: var(--font-ui);
+      font-size: 12px;
+      color: #6c757d;
+    }
+    .hero-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #ced4da;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+
+    /* ── Pattern pills ── */
+    .pattern-pills {
+      max-width: var(--max-width);
+      margin: -20px auto 0;
+      padding: 0 24px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      position: relative;
+      z-index: 10;
+    }
+    .pattern-pill {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 8px 16px;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+    .pattern-pill span { color: var(--accent); margin-right: 5px; }
+
+    /* ── Article layout ── */
+    .layout {
+      max-width: var(--max-width);
+      margin: 48px auto 80px;
+      padding: 0 24px;
+    }
+
+    /* ── Prose ── */
+    #article h1 { display: none; } /* Title is in hero */
+
+    #article h2 {
+      font-family: var(--font-ui);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 56px 0 16px;
+      letter-spacing: -0.3px;
+      line-height: 1.3;
+      padding-top: 8px;
+      border-top: 2px solid var(--border);
+    }
+
+    #article h3 {
+      font-family: var(--font-ui);
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 36px 0 12px;
+      letter-spacing: -0.2px;
+    }
+
+    #article h4 {
+      font-family: var(--font-ui);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 24px 0 8px;
+    }
+
+    #article p {
+      margin: 0 0 22px;
+      color: var(--text);
+    }
+
+    #article a {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      transition: color 0.15s;
+    }
+    #article a:hover { color: var(--accent-hover); }
+
+    #article ul, #article ol {
+      margin: 0 0 22px 24px;
+    }
+    #article li {
+      margin-bottom: 6px;
+    }
+    #article li p { margin: 0; }
+
+    #article strong { font-weight: 700; color: var(--text); }
+    #article em { font-style: italic; }
+
+    /* blockquote */
+    #article blockquote {
+      border-left: 3px solid var(--blockquote-border);
+      background: var(--blockquote-bg);
+      margin: 28px 0;
+      padding: 16px 20px;
+      border-radius: 0 6px 6px 0;
+    }
+    #article blockquote p {
+      margin: 0;
+      font-style: italic;
+      color: #2d5a2d;
+      font-size: 17px;
+    }
+
+    /* inline code */
+    #article code {
+      font-family: var(--font-code);
+      font-size: 14px;
+      background: var(--inline-code-bg);
+      color: var(--inline-code-text);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    /* code blocks */
+    #article pre {
+      background: var(--code-bg) !important;
+      border-radius: 10px;
+      padding: 20px 22px;
+      overflow-x: auto;
+      margin: 8px 0 28px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      position: relative;
+    }
+    #article pre code {
+      font-family: var(--font-code);
+      font-size: 13.5px;
+      background: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      line-height: 1.65;
+    }
+
+    /* language badge on code blocks */
+    #article pre[data-lang]::before {
+      content: attr(data-lang);
+      position: absolute;
+      top: 10px; right: 14px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #555e7a;
+      background: rgba(255,255,255,0.05);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    /* tables */
+    #article table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 28px;
+      font-family: var(--font-ui);
+      font-size: 14px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    #article th {
+      background: #1a1a1a;
+      color: #fff;
+      padding: 10px 16px;
+      text-align: left;
+      font-weight: 600;
+    }
+    #article td {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    #article tr:nth-child(even) td { background: #f8f8f8; }
+    #article tr:last-child td { border-bottom: none; }
+
+    /* hr */
+    #article hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 48px 0;
+    }
+
+    /* images */
+    #article img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 8px 0 24px;
+      box-shadow: var(--shadow);
+      display: block;
+    }
+
+    /* mermaid diagrams */
+    .mermaid {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      margin: 8px 0 32px;
+      text-align: center;
+      overflow-x: auto;
+      box-shadow: var(--shadow);
+    }
+
+    /* ── Tags ── */
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 48px 0 0;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+    }
+    .tag {
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: var(--tag-bg);
+      padding: 5px 12px;
+      border-radius: 20px;
+      text-decoration: none;
+      transition: background 0.15s, color 0.15s;
+    }
+    .tag:hover { background: #e0e0e0; color: var(--text); }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      padding: 40px 24px;
+      text-align: center;
+    }
+    .footer-inner {
+      max-width: var(--max-width);
+      margin: 0 auto;
+    }
+    .footer-inner p {
+      font-family: var(--font-ui);
+      font-size: 13px;
+      color: var(--text-light);
+      line-height: 1.6;
+    }
+    .footer-inner a { color: var(--accent); text-decoration: none; }
+    .footer-inner a:hover { text-decoration: underline; }
+
+    /* ── Loading state ── */
+    #loading {
+      text-align: center;
+      padding: 80px 24px;
+      font-family: var(--font-ui);
+      color: var(--text-secondary);
+    }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      body { font-size: 17px; }
+      .hero { padding: 56px 20px 48px; }
+      .hero h1 { font-size: 24px; }
+      #article h2 { font-size: 22px; }
+      #article pre { padding: 14px 16px; border-radius: 6px; }
+      #article table { font-size: 13px; }
+      .layout { margin-top: 32px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="progress-bar"></div>
+
+  <nav>
+    <div class="nav-inner">
+      <a class="nav-brand" href="#">saxena611</a>
+      <div class="nav-links">
+        <a href="https://github.com/Saxena611/react-hitl-mcp-agent">GitHub</a>
+        <a href="https://github.com/Saxena611/react-hitl-mcp-agent" class="btn-repo">⭐ Star repo</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="hero-tag">Technical Deep-Dive</div>
+    <h1>The Four Patterns That Separate Real AI Agents from Fancy Chatbots</h1>
+    <p class="hero-subtitle">A practical guide to ReAct + Human-in-the-Loop + MCP — building AI agents that reason, pause, and act responsibly.</p>
+    <div class="hero-meta">
+      <span class="hero-pill">🐍 Python</span>
+      <span class="hero-pill">🦜 LangGraph</span>
+      <span class="hero-pill">⚡ DSPy</span>
+      <span class="hero-pill">🔌 MCP</span>
+      <span class="hero-pill">👁 Human-in-the-Loop</span>
+    </div>
+  </header>
+
+  <div class="pattern-pills">
+    <div class="pattern-pill"><span>01</span> Guardrails</div>
+    <div class="pattern-pill"><span>02</span> ReAct Loop</div>
+    <div class="pattern-pill"><span>03</span> HITL Interrupts</div>
+    <div class="pattern-pill"><span>04</span> MCP Tools</div>
+  </div>
+
+  <div class="layout">
+    <div id="loading">
+      <div class="spinner"></div>
+      <p>Loading article…</p>
+    </div>
+    <article id="article" style="display:none;"></article>
+
+    <div class="tags" id="tags" style="display:none;">
+      <span>Tags:</span>
+      <a class="tag" href="#">AI Agents</a>
+      <a class="tag" href="#">LangGraph</a>
+      <a class="tag" href="#">MCP</a>
+      <a class="tag" href="#">DSPy</a>
+      <a class="tag" href="#">Python</a>
+      <a class="tag" href="#">LLM</a>
+      <a class="tag" href="#">Human-in-the-Loop</a>
+      <a class="tag" href="#">SQLite</a>
+      <a class="tag" href="#">Groq</a>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-inner">
+      <p>
+        Full source code at
+        <a href="https://github.com/Saxena611/react-hitl-mcp-agent">github.com/Saxena611/react-hitl-mcp-agent</a>
+        · Built with LangGraph, DSPy, FastMCP, FastAPI
+      </p>
+      <p style="margin-top:8px;">
+        Building production AI agents for data and analytics workflows.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    // ── Reading progress bar ──
+    window.addEventListener('scroll', () => {
+      const scrolled = window.scrollY;
+      const total = document.body.scrollHeight - window.innerHeight;
+      document.getElementById('progress-bar').style.width = (scrolled / total * 100) + '%';
+    });
+
+    // ── Mermaid init ──
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      fontFamily: 'Inter, sans-serif',
+      flowchart: { curve: 'basis', padding: 20 },
+      sequence: { actorMargin: 60 },
+    });
+
+    // ── Custom marked renderer ──
+    const renderer = {
+      // Render mermaid blocks as divs; add data-lang to all pre tags
+      code({ text, lang }) {
+        if (lang === 'mermaid') {
+          return `<div class="mermaid">${text}</div>`;
+        }
+        const escaped = text
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        const langAttr = lang ? ` data-lang="${lang}"` : '';
+        const cls = lang ? ` class="language-${lang}"` : '';
+        return `<pre${langAttr}><code${cls}>${escaped}</code></pre>`;
+      },
+      // Strip the H1 (already in hero)
+      heading({ text, depth }) {
+        if (depth === 1) return '';
+        const id = text.toLowerCase().replace(/[^\w]+/g, '-');
+        return `<h${depth} id="${id}">${text}</h${depth}>`;
+      },
+      // Strip the tags / about-the-author footer sections
+    };
+
+    marked.use({ renderer });
+
+    // ── Fetch & render ──
+    fetch('article.md')
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
+      .then(async md => {
+        // Strip the Tags line and About the Author block at the end (already in HTML)
+        md = md
+          .replace(/^\*\*Tags\*\*:.*$/m, '')
+          .replace(/### About the Author[\s\S]*$/, '');
+
+        const article = document.getElementById('article');
+        article.innerHTML = marked.parse(md);
+
+        // Syntax highlight all code blocks
+        article.querySelectorAll('pre code').forEach(block => {
+          hljs.highlightElement(block);
+        });
+
+        // Render mermaid diagrams
+        await mermaid.run({ nodes: article.querySelectorAll('.mermaid') });
+
+        // Show article, hide loader
+        document.getElementById('loading').remove();
+        article.style.display = 'block';
+        document.getElementById('tags').style.display = 'flex';
+      })
+      .catch(err => {
+        document.getElementById('loading').innerHTML =
+          `<p style="color:#c00;">Failed to load article: ${err.message}</p>`;
+      });
+  </script>
+</body>
+</html>

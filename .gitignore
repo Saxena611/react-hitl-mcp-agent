@@ -33,9 +33,6 @@ htmlcov/
 *.swo
 .DS_Store
 
-# Docs (local only)
-docs/
-
 # LangGraph / LangChain cache
 .langchain.db
 checkpoints.db
