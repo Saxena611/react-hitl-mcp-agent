@@ -17,8 +17,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
 
-  <!-- marked.js -->
-  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+  <!-- marked.js v4 (stable API) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@4/marked.min.js"></script>
 
   <!-- mermaid.js -->
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
@@ -559,8 +559,8 @@
 
         const article = document.getElementById('article');
 
-        // Render markdown with default marked settings
-        article.innerHTML = marked.parse(md);
+        // Render markdown (mangle:false avoids issues with special chars)
+        article.innerHTML = marked.parse(md, { mangle: false, headerIds: false });
 
         // Post-process: convert <pre><code class="language-mermaid"> to .mermaid divs
         article.querySelectorAll('code.language-mermaid').forEach(el => {
