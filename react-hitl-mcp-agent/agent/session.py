@@ -249,11 +249,22 @@ class AgentSession:
 
     @staticmethod
     def _last_ai_text(messages) -> str:
-        """Return the last AIMessage that has text content (not a tool call)."""
+        """
+        Return the last AIMessage that has text content.
+
+        Prefer messages with no tool calls (pure text responses). If none exist,
+        fall back to messages that have both text content and tool calls — some
+        LLMs emit a reasoning blurb alongside a tool call in the same message.
+        """
+        fallback = None
         for msg in reversed(list(messages)):
-            if isinstance(msg, AIMessage) and msg.content and not getattr(msg, "tool_calls", None):
-                return msg.content
-        return "..."
+            if not isinstance(msg, AIMessage) or not msg.content:
+                continue
+            if not getattr(msg, "tool_calls", None):
+                return msg.content          # ideal: text-only message
+            if fallback is None:
+                fallback = msg.content      # acceptable: text + tool call
+        return fallback or "I've noted that. Is there anything else I can help you with?"
 
     # ── Main chat interface ─────────────────────────────────────────────────
 

@@ -76,6 +76,46 @@ CUSTOMERS = {
 # ---------------------------------------------------------------------------
 
 @mcp.tool()
+def get_customer_orders(customer_id: str) -> str:
+    """
+    Get a full summary of all orders for a customer in a single call.
+
+    Returns each order's ID, status, items, total, and key dates.
+    Call this when the user doesn't reference a specific order, or when you
+    need the full picture to proactively surface relevant actions
+    (e.g., a delivered order eligible for refund, a processing order still
+    cancellable, a shipped order with a delayed estimated delivery).
+
+    Args:
+        customer_id: The customer's unique identifier
+    """
+    customer = CUSTOMERS.get(customer_id)
+    if not customer:
+        return json.dumps({"error": f"Customer '{customer_id}' not found."})
+
+    orders = []
+    for order_id in customer.get("orders", []):
+        order = ORDERS.get(order_id)
+        if order:
+            orders.append({
+                "order_id":           order["order_id"],
+                "status":             order["status"],
+                "total":              order["total"],
+                "order_date":         order.get("order_date"),
+                "delivered_date":     order.get("delivered_date"),
+                "estimated_delivery": order.get("estimated_delivery"),
+                "items":              order["items"],
+            })
+
+    return json.dumps({
+        "customer_id": customer_id,
+        "name":        customer["name"],
+        "tier":        customer["tier"],
+        "orders":      orders,
+    })
+
+
+@mcp.tool()
 def get_order(order_id: str) -> str:
     """
     Retrieve order information by order ID.

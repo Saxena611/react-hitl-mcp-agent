@@ -58,6 +58,50 @@ class TestGetOrder:
 
 
 # ---------------------------------------------------------------------------
+# get_customer_orders
+# ---------------------------------------------------------------------------
+
+class TestGetCustomerOrders:
+    def test_existing_customer_returns_all_orders(self):
+        raw = srv.get_customer_orders("CUST-42")
+        data = json.loads(raw)
+        assert data["customer_id"] == "CUST-42"
+        assert data["tier"] == "gold"
+        assert len(data["orders"]) == 3
+
+    def test_all_order_ids_present(self):
+        raw = srv.get_customer_orders("CUST-42")
+        data = json.loads(raw)
+        order_ids = [o["order_id"] for o in data["orders"]]
+        assert "ORD-001" in order_ids
+        assert "ORD-002" in order_ids
+        assert "ORD-003" in order_ids
+
+    def test_order_summary_has_required_fields(self):
+        raw = srv.get_customer_orders("CUST-42")
+        data = json.loads(raw)
+        for order in data["orders"]:
+            assert "order_id" in order
+            assert "status" in order
+            assert "total" in order
+            assert "items" in order
+
+    def test_statuses_reflect_data_store(self):
+        raw = srv.get_customer_orders("CUST-42")
+        data = json.loads(raw)
+        statuses = {o["order_id"]: o["status"] for o in data["orders"]}
+        assert statuses["ORD-001"] == "delivered"
+        assert statuses["ORD-002"] == "processing"
+        assert statuses["ORD-003"] == "shipped"
+
+    def test_missing_customer_returns_error(self):
+        raw = srv.get_customer_orders("CUST-999")
+        data = json.loads(raw)
+        assert "error" in data
+        assert "CUST-999" in data["error"]
+
+
+# ---------------------------------------------------------------------------
 # get_customer_history
 # ---------------------------------------------------------------------------
 
